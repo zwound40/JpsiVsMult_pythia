@@ -169,8 +169,8 @@ struct Gluon{
   id(0){};
 };
 
-Quarkonium traceBackQuarkonium( unsigned short particle , Pythia &pythia);
-HeavyProbe traceBackOpenHeavyFlavor( unsigned short particle , Pythia &pythia);
+void traceBackQuarkonium( Quarkonium &found, unsigned short particle , Pythia &pythia);
+void traceBackOpenHeavyFlavor( HeavyProbe &found, unsigned short particle , Pythia &pythia);
 Quark traceBackQuark( unsigned short particle , Pythia &pythia);
 Gluon traceBackGluon( unsigned short particle , Pythia& pythia, unsigned short dExcl, bool rigorously );
 Gluon traceForwardGluon( unsigned short particle , Pythia &pythia,  unsigned short dExcl, bool rigorously );
@@ -227,10 +227,14 @@ int main( int argc, char** argv ){
   int writeOnia      = argc > 7 ? std::stoi(argv[7]) : 1;
   int writeOpen      = argc > 8 ? std::stoi(argv[8]) : 0;
   int writeHard      = argc > 9 ? std::stoi(argv[9]) : 0;
+  int writeRegions   = argc >10 ? std::stoi(argv[10]): 0; 
+  int traceBack      = argc >11 ? std::stoi(argv[11]): 0; 
   
   if(writeOnia) cout << "writing onia tree"<<endl;
   if(writeOpen) cout << "writing open tree"<<endl;
   if(writeHard) cout << "writing hard tree"<<endl;
+  if(writeRegions) cout << "writing regions"<<endl;
+  if(traceBack) cout << "tracing back origin"<<endl;
   
 
  std::size_t found = settings.find("noMPI");
@@ -302,16 +306,18 @@ int main( int argc, char** argv ){
   eventTree->Branch( "multEta1",            &multEta1 );
   eventTree->Branch( "multV0A",             &multV0A );
   eventTree->Branch( "multV0C",             &multV0C );
-  eventTree->Branch( "multRegionRnd",              &multRegionRnd );
-  eventTree->Branch( "multEta1RegionRnd",          &multEta1RegionRnd );
-  eventTree->Branch( "multV0ARegionRnd",           &multV0ARegionRnd );
-  eventTree->Branch( "multV0CRegionRnd",           &multV0CRegionRnd );
   eventTree->Branch( "type",                &type );
   eventTree->Branch( "nMPI",                &nMPI );
   eventTree->Branch( "ptHat",               &ptHat );
   eventTree->Branch( "ptHat1",               &ptHat1 );
   eventTree->Branch( "b",               &b );
-  
+
+  if( writeRegions ){
+    eventTree->Branch( "multRegionRnd",              &multRegionRnd );
+    eventTree->Branch( "multEta1RegionRnd",          &multEta1RegionRnd );
+    eventTree->Branch( "multV0ARegionRnd",           &multV0ARegionRnd );
+    eventTree->Branch( "multV0CRegionRnd",           &multV0CRegionRnd );
+  }
 }
   
   
@@ -320,112 +326,123 @@ int main( int argc, char** argv ){
 
    Quarkonium onium;
   if(writeOnia) {
-  oniumTree->Branch( "mult",                  &mult );
-  oniumTree->Branch( "multEta1",              &multEta1 );
-  oniumTree->Branch( "multV0A",               &multV0A );
-  oniumTree->Branch( "multV0C",               &multV0C );
-  oniumTree->Branch( "nMPI",                  &nMPI );
-  oniumTree->Branch( "ptHat",                 &ptHat );
-  oniumTree->Branch( "type",                  &type );
-  oniumTree->Branch( "onium.pdg",             &onium.pdg );
-  oniumTree->Branch( "onium.decayChannel",    &onium.decayChannel );
-  oniumTree->Branch( "onium.pt",              &onium.pt );
-  oniumTree->Branch( "onium.y",               &onium.y );
-  oniumTree->Branch( "onium.initialPdg",      &onium.initialPdg );
-  oniumTree->Branch( "onium.process",         &onium.process );
-  oniumTree->Branch( "onium.mother1process",  &onium.mother1process );
-  oniumTree->Branch( "onium.mother2process",  &onium.mother2process );
-  oniumTree->Branch( "onium.mother1mpi",      &onium.mother1mpi );
-  oniumTree->Branch( "onium.mother2mpi",      &onium.mother2mpi );
-  oniumTree->Branch( "onium.sameAncestor",    &onium.sameAncestor );
-  oniumTree->Branch( "onium.iMPI",            &onium.iMPI );
-  oniumTree->Branch( "multRegion1",              &onium.multRegion1 );
-  oniumTree->Branch( "multRegion2",              &onium.multRegion2 );
-  oniumTree->Branch( "multRegion3",              &onium.multRegion3 );
-  oniumTree->Branch( "multRegionRnd",            &onium.multRegionRnd );
-  oniumTree->Branch( "multEta1Region1",          &onium.multEta1Region1 );
-  oniumTree->Branch( "multEta1Region2",          &onium.multEta1Region2 );
-  oniumTree->Branch( "multEta1Region3",          &onium.multEta1Region3 );
-  oniumTree->Branch( "multEta1RegionRnd",        &onium.multEta1RegionRnd );
-  oniumTree->Branch( "multV0ARegion1",           &onium.multV0ARegion1 );
-  oniumTree->Branch( "multV0ARegion2",           &onium.multV0ARegion2 );
-  oniumTree->Branch( "multV0ARegion3",           &onium.multV0ARegion3 );
-  oniumTree->Branch( "multV0ARegionRnd",         &onium.multV0ARegionRnd );
-  oniumTree->Branch( "multV0CRegion1",           &onium.multV0CRegion1 );
-  oniumTree->Branch( "multV0CRegion2",           &onium.multV0CRegion2 );
-  oniumTree->Branch( "multV0CRegion3",           &onium.multV0CRegion3 );
-  oniumTree->Branch( "multV0CRegionRnd",         &onium.multV0CRegionRnd );
-  oniumTree->Branch( "b",               &b );
+    oniumTree->Branch( "mult",                  &mult );
+    oniumTree->Branch( "multEta1",              &multEta1 );
+    oniumTree->Branch( "multV0A",               &multV0A );
+    oniumTree->Branch( "multV0C",               &multV0C );
+    oniumTree->Branch( "nMPI",                  &nMPI );
+    oniumTree->Branch( "ptHat",                 &ptHat );
+    oniumTree->Branch( "type",                  &type );
+    oniumTree->Branch( "b",                     &b );
+    oniumTree->Branch( "onium.pdg",             &onium.pdg );
+    oniumTree->Branch( "onium.decayChannel",    &onium.decayChannel );
+    oniumTree->Branch( "onium.pt",              &onium.pt );
+    oniumTree->Branch( "onium.y",               &onium.y );
+    if(traceBack){
+        oniumTree->Branch( "onium.initialPdg",      &onium.initialPdg );
+        oniumTree->Branch( "onium.process",         &onium.process );
+        oniumTree->Branch( "onium.mother1process",  &onium.mother1process );
+        oniumTree->Branch( "onium.mother2process",  &onium.mother2process );
+        oniumTree->Branch( "onium.mother1mpi",      &onium.mother1mpi );
+        oniumTree->Branch( "onium.mother2mpi",      &onium.mother2mpi );
+        oniumTree->Branch( "onium.sameAncestor",    &onium.sameAncestor );
+        oniumTree->Branch( "onium.iMPI",            &onium.iMPI );
+    }
+    if( writeRegions ){
+        oniumTree->Branch( "multRegion1",              &onium.multRegion1 );
+        oniumTree->Branch( "multRegion2",              &onium.multRegion2 );
+        oniumTree->Branch( "multRegion3",              &onium.multRegion3 );
+        oniumTree->Branch( "multRegionRnd",            &onium.multRegionRnd );
+        oniumTree->Branch( "multEta1Region1",          &onium.multEta1Region1 );
+        oniumTree->Branch( "multEta1Region2",          &onium.multEta1Region2 );
+        oniumTree->Branch( "multEta1Region3",          &onium.multEta1Region3 );
+        oniumTree->Branch( "multEta1RegionRnd",        &onium.multEta1RegionRnd );
+        oniumTree->Branch( "multV0ARegion1",           &onium.multV0ARegion1 );
+        oniumTree->Branch( "multV0ARegion2",           &onium.multV0ARegion2 );
+        oniumTree->Branch( "multV0ARegion3",           &onium.multV0ARegion3 );
+        oniumTree->Branch( "multV0ARegionRnd",         &onium.multV0ARegionRnd );
+        oniumTree->Branch( "multV0CRegion1",           &onium.multV0CRegion1 );
+        oniumTree->Branch( "multV0CRegion2",           &onium.multV0CRegion2 );
+        oniumTree->Branch( "multV0CRegion3",           &onium.multV0CRegion3 );
+        oniumTree->Branch( "multV0CRegionRnd",         &onium.multV0CRegionRnd );
+    }
    }
+
 
    HeavyProbe open;
    
   if(writeOpen) {
-  openTree->Branch( "mult",                  &mult );
-  openTree->Branch( "multEta1",              &multEta1 );
-  openTree->Branch( "multV0A",               &multV0A );
-  openTree->Branch( "multV0C",               &multV0C );
-  openTree->Branch( "nMPI",                  &nMPI );
-  openTree->Branch( "ptHat",                 &ptHat );
-  openTree->Branch( "type",                  &type );
-  openTree->Branch( "onium.pdg",             &open.pdg );
-  openTree->Branch( "onium.pt",              &open.pt );
-  openTree->Branch( "onium.y",               &open.y );
-  openTree->Branch( "onium.initialPdg",      &open.initialPdg );
-  openTree->Branch( "onium.mother1process",  &open.mother1process );
-  openTree->Branch( "onium.mother2process",  &open.mother2process );
-  openTree->Branch( "onium.mother1mpi",      &open.mother1mpi );
-  openTree->Branch( "onium.mother2mpi",      &open.mother2mpi );
-  openTree->Branch( "multRegion1",              &open.multRegion1 );
-  openTree->Branch( "multRegion2",              &open.multRegion2 );
-  openTree->Branch( "multRegion3",              &open.multRegion3 );
-  openTree->Branch( "multRegionRnd",            &open.multRegionRnd );
-  openTree->Branch( "multEta1Region1",          &open.multEta1Region1 );
-  openTree->Branch( "multEta1Region2",          &open.multEta1Region2 );
-  openTree->Branch( "multEta1Region3",          &open.multEta1Region3 );
-  openTree->Branch( "multEta1RegionRnd",        &open.multEta1RegionRnd );
-  openTree->Branch( "multV0ARegion1",           &open.multV0ARegion1 );
-  openTree->Branch( "multV0ARegion2",           &open.multV0ARegion2 );
-  openTree->Branch( "multV0ARegion3",           &open.multV0ARegion3 );
-  openTree->Branch( "multV0ARegionRnd",         &open.multV0ARegionRnd );
-  openTree->Branch( "multV0CRegion1",           &open.multV0CRegion1 );
-  openTree->Branch( "multV0CRegion2",           &open.multV0CRegion2 );
-  openTree->Branch( "multV0CRegion3",           &open.multV0CRegion3 );
-  openTree->Branch( "multV0CRegionRnd",         &open.multV0CRegionRnd );
-  openTree->Branch( "b",               &b );
-   }
+    openTree->Branch( "mult",                  &mult );
+    openTree->Branch( "multEta1",              &multEta1 );
+    openTree->Branch( "multV0A",               &multV0A );
+    openTree->Branch( "multV0C",               &multV0C );
+    openTree->Branch( "nMPI",                  &nMPI );
+    openTree->Branch( "ptHat",                 &ptHat );
+    openTree->Branch( "type",                  &type );
+    openTree->Branch( "b",                     &b );
+    openTree->Branch( "onium.pdg",             &open.pdg );
+    openTree->Branch( "onium.pt",              &open.pt );
+    openTree->Branch( "onium.y",               &open.y );
+    if(traceBack){
+        openTree->Branch( "onium.initialPdg",      &open.initialPdg );
+        openTree->Branch( "onium.mother1process",  &open.mother1process );
+        openTree->Branch( "onium.mother2process",  &open.mother2process );
+        openTree->Branch( "onium.mother1mpi",      &open.mother1mpi );
+        openTree->Branch( "onium.mother2mpi",      &open.mother2mpi );
+    }
+    if( writeRegions ){
+        openTree->Branch( "multRegion1",              &open.multRegion1 );
+        openTree->Branch( "multRegion2",              &open.multRegion2 );
+        openTree->Branch( "multRegion3",              &open.multRegion3 );
+        openTree->Branch( "multRegionRnd",            &open.multRegionRnd );
+        openTree->Branch( "multEta1Region1",          &open.multEta1Region1 );
+        openTree->Branch( "multEta1Region2",          &open.multEta1Region2 );
+        openTree->Branch( "multEta1Region3",          &open.multEta1Region3 );
+        openTree->Branch( "multEta1RegionRnd",        &open.multEta1RegionRnd );
+        openTree->Branch( "multV0ARegion1",           &open.multV0ARegion1 );
+        openTree->Branch( "multV0ARegion2",           &open.multV0ARegion2 );
+        openTree->Branch( "multV0ARegion3",           &open.multV0ARegion3 );
+        openTree->Branch( "multV0ARegionRnd",         &open.multV0ARegionRnd );
+        openTree->Branch( "multV0CRegion1",           &open.multV0CRegion1 );
+        openTree->Branch( "multV0CRegion2",           &open.multV0CRegion2 );
+        openTree->Branch( "multV0CRegion3",           &open.multV0CRegion3 );
+        openTree->Branch( "multV0CRegionRnd",         &open.multV0CRegionRnd );
+    }
+  }
 
-   HardProbe highPtHadron;
+  HardProbe highPtHadron;
    
   if(writeHard) {
-  hardTree->Branch( "mult",                  &mult );
-  hardTree->Branch( "multEta1",              &multEta1 );
-  hardTree->Branch( "multV0A",               &multV0A );
-  hardTree->Branch( "multV0C",               &multV0C );
-  hardTree->Branch( "nMPI",                  &nMPI );
-  hardTree->Branch( "ptHat",                 &ptHat );
-  hardTree->Branch( "type",                  &type );
-  hardTree->Branch( "onium.pdg",             &highPtHadron.pdg );
-  hardTree->Branch( "onium.pt",              &highPtHadron.pt );
-  hardTree->Branch( "onium.y",               &highPtHadron.y );
-  hardTree->Branch( "multRegion1",              &highPtHadron.multRegion1 );
-  hardTree->Branch( "multRegion2",              &highPtHadron.multRegion2 );
-  hardTree->Branch( "multRegion3",              &highPtHadron.multRegion3 );
-  hardTree->Branch( "multRegionRnd",            &highPtHadron.multRegionRnd );
-  hardTree->Branch( "multEta1Region1",          &highPtHadron.multEta1Region1 );
-  hardTree->Branch( "multEta1Region2",          &highPtHadron.multEta1Region2 );
-  hardTree->Branch( "multEta1Region3",          &highPtHadron.multEta1Region3 );
-  hardTree->Branch( "multEta1RegionRnd",        &highPtHadron.multEta1RegionRnd );
-  hardTree->Branch( "multV0ARegion1",           &highPtHadron.multV0ARegion1 );
-  hardTree->Branch( "multV0ARegion2",           &highPtHadron.multV0ARegion2 );
-  hardTree->Branch( "multV0ARegion3",           &highPtHadron.multV0ARegion3 );
-  hardTree->Branch( "multV0ARegionRnd",         &highPtHadron.multV0ARegionRnd );
-  hardTree->Branch( "multV0CRegion1",           &highPtHadron.multV0CRegion1 );
-  hardTree->Branch( "multV0CRegion2",           &highPtHadron.multV0CRegion2 );
-  hardTree->Branch( "multV0CRegion3",           &highPtHadron.multV0CRegion3 );
-  hardTree->Branch( "multV0CRegionRnd",         &highPtHadron.multV0CRegionRnd );
-  hardTree->Branch( "b",               &b );
-   }
+    hardTree->Branch( "mult",                  &mult );
+    hardTree->Branch( "multEta1",              &multEta1 );
+    hardTree->Branch( "multV0A",               &multV0A );
+    hardTree->Branch( "multV0C",               &multV0C );
+    hardTree->Branch( "nMPI",                  &nMPI );
+    hardTree->Branch( "ptHat",                 &ptHat );
+    hardTree->Branch( "type",                  &type );
+    hardTree->Branch( "onium.pdg",             &highPtHadron.pdg );
+    hardTree->Branch( "onium.pt",              &highPtHadron.pt );
+    hardTree->Branch( "onium.y",               &highPtHadron.y );
+    hardTree->Branch( "b",                     &b );
+    if(writeRegions){
+        hardTree->Branch( "multRegion1",              &highPtHadron.multRegion1 );
+        hardTree->Branch( "multRegion2",              &highPtHadron.multRegion2 );
+        hardTree->Branch( "multRegion3",              &highPtHadron.multRegion3 );
+        hardTree->Branch( "multRegionRnd",            &highPtHadron.multRegionRnd );
+        hardTree->Branch( "multEta1Region1",          &highPtHadron.multEta1Region1 );
+        hardTree->Branch( "multEta1Region2",          &highPtHadron.multEta1Region2 );
+        hardTree->Branch( "multEta1Region3",          &highPtHadron.multEta1Region3 );
+        hardTree->Branch( "multEta1RegionRnd",        &highPtHadron.multEta1RegionRnd );
+        hardTree->Branch( "multV0ARegion1",           &highPtHadron.multV0ARegion1 );
+        hardTree->Branch( "multV0ARegion2",           &highPtHadron.multV0ARegion2 );
+        hardTree->Branch( "multV0ARegion3",           &highPtHadron.multV0ARegion3 );
+        hardTree->Branch( "multV0ARegionRnd",         &highPtHadron.multV0ARegionRnd );
+        hardTree->Branch( "multV0CRegion1",           &highPtHadron.multV0CRegion1 );
+        hardTree->Branch( "multV0CRegion2",           &highPtHadron.multV0CRegion2 );
+        hardTree->Branch( "multV0CRegion3",           &highPtHadron.multV0CRegion3 );
+        hardTree->Branch( "multV0CRegionRnd",         &highPtHadron.multV0CRegionRnd );
+    }
+  }
 
   pythia.readFile( settings );
   pythia.readString("Random:setSeed = on");
@@ -491,17 +508,20 @@ int main( int argc, char** argv ){
             if( abs(  part->eta() ) < 1.0 ) ++ multEta1;
             else if( inV0Aacceptance( part->eta() ) ) ++multV0A;
             else if( inV0Cacceptance( part->eta() ) ) ++multV0C;
-            
-            fillRegion( 
-              multRegionRnd, multEta1RegionRnd, multV0ARegionRnd, multV0CRegionRnd,
-              abs(part->phi()) / M_PI, part->eta()
-            );
+            if(writeRegions ){
+              fillRegion( 
+                multRegionRnd, multEta1RegionRnd, multV0ARegionRnd, multV0CRegionRnd,
+                abs(part->phi()) / M_PI, part->eta()
+              );
+            }
             if(writeHard && part->pT() > 2){
               Quarkonium found;
               found.pt = part->pT();
               found.y = part->y();
               found.pdg = part->id();
-              fillRegionsForHardProbe( found, pythia,part->phi() / M_PI, -1. + 2. * gRandom->Rndm() );
+              if( writeRegions ){
+                fillRegionsForHardProbe( found, pythia,part->phi() / M_PI, -1. + 2. * gRandom->Rndm() );
+              }
               foundHighPtPerEvent.push_back( found );
             }
           }
@@ -517,7 +537,16 @@ int main( int argc, char** argv ){
       // we found a J/psi!
                 totalCallsPerEvent = 0;
                 if(verbose) cout <<endl<<endl<< "event " << iev << "  (code: " << pythia.info.code() <<")"<< endl;
-                Quarkonium found = traceBackQuarkonium( iPart, pythia );
+                Quarkonium found;
+                if( traceBack){
+                    traceBackQuarkonium( found, iPart, pythia );
+                    if( found.process == kUndefined || 
+                        ( found.process > 3 && ( found.mother1process == kUndefined || found.mother2process == kUndefined ) ) 
+                    ) {
+                      cout << "UNDEFINED BEHAVIOR!!!!!"<<endl;
+                      pythia.event.list(0,0,0);
+                    }
+                }
                 found.pt = part->pT();
                 found.y = part->y();
                 found.pdg = pdg;
@@ -528,27 +557,28 @@ int main( int argc, char** argv ){
 
                 if (      pdgDau1 == 11 && pdgDau2 == 11 ) found.decayChannel = 1;
                 else if ( pdgDau1 == 13 && pdgDau2 == 13 ) found.decayChannel = -1;
-                if( found.process == kUndefined || (  found.process > 3 &&
-                  ( found.mother1process == kUndefined    ||   found.mother2process == kUndefined  ) ) ) {
-                  cout << "UNDEFINED BEHAVIOR!!!!!"<<endl;
-                  pythia.event.list(0,0,0);
+                if( writeRegions ){
+                  fillRegionsForHardProbe( found, pythia,part->phi() / M_PI, -1. + 2. *gRandom->Rndm() );
                 }
-                fillRegionsForHardProbe( found, pythia,part->phi() / M_PI, -1. + 2. *gRandom->Rndm() );
                 foundQuarkoniumPerEvent.push_back( found);
               }
               else if( writeOpen && ( isDmeson(pdg)  || isBmeson(pdg) ) ){
                   
                 totalCallsPerEvent = 0;
-                HeavyProbe found = traceBackOpenHeavyFlavor( iPart, pythia );;
+                HeavyProbe found;
+                if(traceBack){
+                  traceBackOpenHeavyFlavor( found, iPart, pythia );
+                  if(found.mother1process == kUndefined || ( found.mother1process != kFromOnium && found.mother2process == kUndefined ) ){
+                    cout << "UNDEFINED BEHAVIOR!!!!!"<<endl;
+                    pythia.event.list(0,0,0);
+                  }
+                }
                 found.pdg = pdg;
                 found.pt = part->pT();
                 found.y =  part->y();
-                if(found.mother1process == kUndefined  ||  ( found.mother1process != kFromOnium && found.mother2process == kUndefined ) ){
-                  cout << "UNDEFINED BEHAVIOR!!!!!"<<endl;
-                  pythia.event.list(0,0,0);
+                if( writeRegions ){
+                  fillRegionsForHardProbe( found, pythia, part->phi() / M_PI, -1. + 2. *gRandom->Rndm() );
                 }
-                fillRegionsForHardProbe( found, pythia, part->phi() / M_PI, -1. + 2. *gRandom->Rndm() );
-
                 foundDPerEvent.push_back( found );
               }
               
@@ -613,9 +643,8 @@ bool inV0Cacceptance( float eta){
 
 
 
-Quarkonium traceBackQuarkonium( unsigned short nextParticle, Pythia & pythia ){
+void traceBackQuarkonium( Quarkonium &ret, unsigned short nextParticle, Pythia & pythia ){
   if(verbose) cout << endl << endl << "Tracing back charmonium" << endl << endl;
-  Quarkonium ret;
   while( nextParticle && totalCallsPerEvent < maxCalls ){
     ++ totalCallsPerEvent;
     Particle* part = &pythia.event[ nextParticle ];
@@ -705,12 +734,11 @@ Quarkonium traceBackQuarkonium( unsigned short nextParticle, Pythia & pythia ){
     if(ret.sameAncestor) cout << "same ancestor!!" << endl;
   }
 //   verbose = false;
-  return ret;
+  return;
 }
 
-HeavyProbe traceBackOpenHeavyFlavor( unsigned short nextParticle, Pythia &pythia ){
+void traceBackOpenHeavyFlavor( HeavyProbe &ret, unsigned short nextParticle, Pythia &pythia ){
   if(verbose) cout << endl << endl << "Tracing back open heavy flavor" << endl << endl;
-  HeavyProbe ret;
   while( nextParticle && totalCallsPerEvent < maxCalls ){
     ++ totalCallsPerEvent;
     Particle* part = &pythia.event[ nextParticle ];
@@ -789,7 +817,7 @@ HeavyProbe traceBackOpenHeavyFlavor( unsigned short nextParticle, Pythia &pythia
     if( ret.mother2process != kUndefined ) cout << "mother2 process = " << heavyQuarkProcessNames[ ret.mother2process] << (ret.mother2mpi ? "mpi" : "") << endl;
   }
 //   verbose = false;
-  return ret;
+  return;
 }
 
 
@@ -919,7 +947,8 @@ Quark traceBackQuark(  unsigned short nextParticle, Pythia &pythia ){
   
       else if(status == 91 && isOnium(m1)){
         ret.process = kFromOnium;
-        Quarkonium motherQuarkonium = traceBackQuarkonium(  m1, pythia );
+        Quarkonium motherQuarkonium;
+        traceBackQuarkonium( motherQuarkonium, m1, pythia );
         ret.mpi = motherQuarkonium.iMPI;
       }
       ret.ancestor = m1;
