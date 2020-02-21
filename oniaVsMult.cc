@@ -1,3 +1,45 @@
+/**
+ * 
+ * This macro generates events with PYTHIA, and stores information about
+ * the events, about produced quarkonia, D-meson, and/or high pT particles
+ * in TTree's that it writes into a root file.
+ * 
+ *
+ * General structure:
+ * 
+ * 
+ *
+ *
+ *
+ * Details:
+ * 
+ * The code was written to be run on a computing farm (like GSI kronos)
+ *
+ *
+ * 
+ * 
+ * 
+ * 
+ * It takes arguments from the command line:
+ *
+ * argument 1:  number of events to produce (default: 10000)
+ * argument 2:  whether or not to scale down the MB events (0=no, 1=yes) (default: 0)
+ * argument 3:  whether to print out more information while running (default: 0)
+ * argument 4:  the settings file to use (default: "settings.cmd")
+ * argument 5:  the output filename (without the final .root) (default: "out")
+ * argument 6:  an initial seed for the random number generator (default:1)
+ * argument 7:  whether to search for and write out quarkonia (default: 1)
+ * argument 8:  whether to search for and write out D mesons (default: 0)
+ * argument 9:  whether to search for and write out high pT particles (default: 0)
+ * argument 10: whether to write out the multiplicity in the different regions (default:0)
+ * argument 11: whether to find out the production mechanism of the quarkonia or D-meson or
+ *              high-pT particle (default:0) 
+ * 
+ */
+
+
+
+
 #include <omp.h>
 #include <time.h>
 #include "TROOT.h"
