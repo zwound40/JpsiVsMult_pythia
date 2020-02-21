@@ -1,8 +1,13 @@
 /**
  * 
- * This macro generates events with PYTHIA, and stores information about
- * the events, about produced quarkonia, D-meson, and/or high pT particles
- * in TTree's that it writes into a root file.
+ * This macro generates events with PYTHIA, looks for hard probes in the events,
+ * and stores the information about the events and probes in TTree's that it writes into a root file.
+ * The hard probes can be
+ *  - high pT particles
+ *  - D or B mesons
+ *  - quarkonia
+ * The trees can be later used to determine e.g. the multiplicity dependence of J/psi production.
+ * 
  * 
  *
  * General structure:
@@ -29,10 +34,10 @@
  * argument 5:  the output filename (without the final .root) (default: "out")
  * argument 6:  an initial seed for the random number generator (default:1)
  * argument 7:  whether to search for and write out quarkonia (default: 1)
- * argument 8:  whether to search for and write out D mesons (default: 0)
+ * argument 8:  whether to search for and write out D/B mesons (default: 0)
  * argument 9:  whether to search for and write out high pT particles (default: 0)
  * argument 10: whether to write out the multiplicity in the different regions (default:0)
- * argument 11: whether to find out the production mechanism of the quarkonia or D-meson or
+ * argument 11: whether to find out the production mechanism of the quarkonia or D/B-meson or
  *              high-pT particle (default:0) 
  * 
  */
@@ -50,6 +55,21 @@
 #include "Pythia8/Pythia.h"
 
 using namespace Pythia8;
+
+/**
+ * Quarkonium production processes in pythia
+ * 
+ * The first three as described in http://home.thep.lu.se/~torbjorn/pythia82html/OniaProcesses.html
+ * kgg2QQ stands for: gluon + gluon                 -> quarkonium + gluon
+ * kqq2QQ stands for: light quark + light antiquark -> quarkonium + glueon
+ * kqg2QQ stands for: gluon + light quark           -> quarkonium + light quark
+ * 
+ * "string fragmentation" means the quarkonium was not produced at the hard scattering process, but
+ *  at the string fragmentation state ("cluster collapse", see arXiv:hep-ph/9809266).
+ *  Also non-prompt J/psi has this process code.
+ * 
+ * 
+ */
 
 enum  QuarkoniumProcesses {
   kUndefined,                 // 0
@@ -70,7 +90,14 @@ std::array<string,kNQuarkoniumProcesses> charmoniumProcessNames = {
  // "nonprompt"
 };
 
-
+/**
+ * Heavy quark production processes in pythia.
+ * 
+ * "kGluonFrom..." means a gluon splits into a heavy quark-antiquark pair
+ * "kFromOnium" means e.g. a D meson from a Charmonium decay
+ * 
+ * 
+ */
 
 
 enum HeavyQuarkProcesses {
@@ -113,6 +140,24 @@ std::array<string,kNHeavyQuarkProcesses> heavyQuarkProcessNames = {
   "from quarkonium decay"
 };
 
+/**
+ * 
+ * This is the information stored for each "hard probe" in the tree:
+ *  - the pdg code (see http://pdg.lbl.gov/2019/reviews/rpp2019-rev-monte-carlo-numbering.pdf )
+ *  - the pT and rapidity
+ *  - the multiplicities in the towards ("Region1"), transverse ("Region2") and away ("Region3") region 
+ *    and in a random region in phi ("RegionRnd"). The latter is needed for normalization.
+ *    these multiplicities are counted either
+ *    - for all etas
+ *    - for |eta| < 1
+ *    - in the V0A acceptance
+ *    - in the V0C acceptance
+ * 
+ * A hard probe can be a high-pT partcle, a D or B meson, or a quarkonium.
+ * For the latter two, additional information is stored, that will be defined
+ * in the next step.
+ * 
+ */
 
 struct HardProbe{
   int pdg;
@@ -157,6 +202,15 @@ struct HardProbe{
 };
 
 
+/**
+ * 
+ * Additional information stored for D, B-mesons and quarkonia
+ * 
+ * 
+ */
+
+
+
 
 struct HeavyProbe: HardProbe{
   unsigned char mother1process, mother2process;
@@ -174,6 +228,13 @@ struct HeavyProbe: HardProbe{
 
 
 
+
+/**
+ * 
+ * Additional information stored only for quarkonia
+ * 
+ * 
+ */
 struct Quarkonium: HeavyProbe{
   int decayChannel;
   unsigned char process;
@@ -250,14 +311,27 @@ void fillRegions( unsigned short &multRegion1, unsigned short &multEta1Region1, 
                   unsigned short &multRegion2, unsigned short &multEta1Region2, unsigned short &multV0ARegion2, unsigned short &multV0CRegion2,
                   unsigned short &multRegion3, unsigned short &multEta1Region3, unsigned short &multV0ARegion3, unsigned short &multV0CRegion3,
                   double phi, double eta);
-void fillRegion( unsigned short &multRegion, unsigned short &multEta1Region, unsigned short &multV0ARegion, unsigned short &multV0CRegion,
+void fillRegionRandom( unsigned short &multRegion, unsigned short &multEta1Region, unsigned short &multV0ARegion, unsigned short &multV0CRegion,
                   double phi, double eta);
 void fillRegionsForHardProbe( HardProbe &found, Pythia& pythia, double phi, double phi_rnd);
 
 unsigned short totalCallsPerEvent;
 const unsigned short maxCalls = 10000000000;
 int verbose;
-
+/**
+ * 
+ * The main function.
+ * 
+ * - processes the command line arguments
+ * - starts parallel threads using openMP
+ * - created the output trees
+ * - initialized pythia
+ * - runs the event loop 
+ *   - here it calculates the multplicities, looks for the hard probes, and calls helper function
+ *     to get the multiplicities in the different regions, and information about the hard probes.
+ * 
+ * 
+ */
 int main( int argc, char** argv ){
 
   int nev            = argc > 1 ? std::stoi(argv[1]) : 10000;
@@ -279,37 +353,33 @@ int main( int argc, char** argv ){
   if(traceBack) cout << "tracing back origin"<<endl;
   
 
+// check in the settings file if MPI are switched off  
  std::size_t found = settings.find("noMPI");
  bool noMPI =  found !=std::string::npos;
  
+// check in the settings file if color reconnection is switched off 
  std::size_t found2 = settings.find("noCR");
  bool noCR =  found2 !=std::string::npos;
 
-  gRandom = new TRandom3();
+ gRandom = new TRandom3();
 
-  
-   ROOT::EnableThreadSafety();
-  
+ 
+ 
+// we run several threads in parallel in order to produce more events in the same time 
+ ROOT::EnableThreadSafety();
   
 #pragma omp parallel
 {
 
-  
-  
   int thread = omp_get_thread_num(); 
-  
   cout << thread << endl;
 
   Pythia pythia;
-
-
+  
   unsigned short multRegionRnd;
   unsigned short multEta1RegionRnd;
   unsigned short multV0ARegionRnd;
   unsigned short multV0CRegionRnd;
-  
-  
-  
   unsigned short  mult, multEta1, multV0A, multV0C, nMPI;
   unsigned char type;
   float ptHat;
@@ -329,7 +399,6 @@ int main( int argc, char** argv ){
    #pragma omp critical
     { 
       fout = TFile::Open(  outfilename_thread.c_str(),"RECREATE", "", 9);
-     
     }
     fout->cd();
    
@@ -342,25 +411,28 @@ int main( int argc, char** argv ){
      }
 
   
+  // define the tree for minimum bias events 
   
-{
-  eventTree->Branch( "mult",                &mult );
-  eventTree->Branch( "multEta1",            &multEta1 );
-  eventTree->Branch( "multV0A",             &multV0A );
-  eventTree->Branch( "multV0C",             &multV0C );
-  eventTree->Branch( "type",                &type );
-  eventTree->Branch( "nMPI",                &nMPI );
-  eventTree->Branch( "ptHat",               &ptHat );
-  eventTree->Branch( "ptHat1",               &ptHat1 );
-  eventTree->Branch( "b",               &b );
+  
+  
+    {
+    eventTree->Branch( "mult",                &mult );
+    eventTree->Branch( "multEta1",            &multEta1 );
+    eventTree->Branch( "multV0A",             &multV0A );
+    eventTree->Branch( "multV0C",             &multV0C );
+    eventTree->Branch( "type",                &type );
+    eventTree->Branch( "nMPI",                &nMPI );
+    eventTree->Branch( "ptHat",               &ptHat );
+    eventTree->Branch( "ptHat1",               &ptHat1 );
+    eventTree->Branch( "b",               &b );
 
-  if( writeRegions ){
-    eventTree->Branch( "multRegionRnd",              &multRegionRnd );
-    eventTree->Branch( "multEta1RegionRnd",          &multEta1RegionRnd );
-    eventTree->Branch( "multV0ARegionRnd",           &multV0ARegionRnd );
-    eventTree->Branch( "multV0CRegionRnd",           &multV0CRegionRnd );
-  }
-}
+    if( writeRegions ){
+        eventTree->Branch( "multRegionRnd",              &multRegionRnd );
+        eventTree->Branch( "multEta1RegionRnd",          &multEta1RegionRnd );
+        eventTree->Branch( "multV0ARegionRnd",           &multV0ARegionRnd );
+        eventTree->Branch( "multV0CRegionRnd",           &multV0CRegionRnd );
+    }
+    }
   
   
   
@@ -502,7 +574,11 @@ int main( int argc, char** argv ){
   pythia.init();
 
 
+  
+  // here the event loop starts
+  
      for (int iev = 0; iev < nev; iev++) {
+         
       if (!pythia.next()) continue;
       mult = 0; // mult in eta +- inf.
       multEta1 = 0; // mult in eta +-1.0
@@ -543,6 +619,10 @@ int main( int argc, char** argv ){
       vector <Quarkonium> foundQuarkoniumPerEvent;
       vector <HeavyProbe> foundDPerEvent;
       vector <HardProbe> foundHighPtPerEvent;
+      
+      
+      // here the loop over the particles starts
+      
         for ( int iPart = 0;  iPart < pythia.event.size(); iPart++) {
           Particle* part = &pythia.event[iPart];
           if( isPrimaryChargedALICE(iPart, pythia) ){
@@ -551,7 +631,7 @@ int main( int argc, char** argv ){
             else if( inV0Aacceptance( part->eta() ) ) ++multV0A;
             else if( inV0Cacceptance( part->eta() ) ) ++multV0C;
             if(writeRegions ){
-              fillRegion( 
+              fillRegionRandom( 
                 multRegionRnd, multEta1RegionRnd, multV0ARegionRnd, multV0CRegionRnd,
                 abs(part->phi()) / M_PI, part->eta()
               );
@@ -628,6 +708,36 @@ int main( int argc, char** argv ){
           }
         }
           
+ /**
+  *
+  * Now come some calculations on how many of the MB events to store.
+  * I had to find a trade off: I cannot store all events, otherwise the trees will become too large,
+  * but I want to save enough high multiplicity, because they are rare and I don't want to have
+  * large statistical uncertainties there.
+  * So the default behavior is:
+  *  - keep all events with mult >= 350
+  *  - keep 1% of events with 100 <= mult < 350
+  *  - keep 0.1% of events with mult < 100 
+  *
+  * For the case of deactivated color reconnection or MPI, the mean multiplicities are different, so I 
+  * also had to adjust these numbers in order to have comparable statistics.
+  * If color reconnection is switched off I use:
+  *  - keep all events with mult >= 550
+  *  - keep 1% of events with 100 <= mult < 550
+  *  - keep 0.1% of events with mult < 100 
+  * 
+  * If MPI are switched off I use:
+  *  - keep all events with mult >= 120
+  *  - keep 1% of events with 100 <= mult < 120
+  *  - keep 0.1% of events with mult < 100 
+  * 
+  * 
+  * It is important to take these factors correctly into account e.g. when plotting the multiplicity dependence
+  * of J/psi production
+  * 
+  *
+  */         
+          
         unsigned short downscaleFactor = 1;
         if(scaleDown){
           if( mult < 100) downscaleFactor *= 10;
@@ -659,7 +769,7 @@ int main( int argc, char** argv ){
         }
       }
 
-         
+  // here the event loop ends       
   
 
        #pragma omp critical
@@ -1279,7 +1389,7 @@ void fillRegions( unsigned short &multRegion1, unsigned short &multEta1Region1, 
   }
 }
 
-void fillRegion( unsigned short &multRegion, unsigned short &multEta1Region, unsigned short &multV0ARegion,  unsigned short &multV0CRegion,
+void fillRegionRandom( unsigned short &multRegion, unsigned short &multEta1Region, unsigned short &multV0ARegion,  unsigned short &multV0CRegion,
                   double phi, double eta){
   if(phi < 1./3.){
     ++multRegion;
@@ -1303,7 +1413,7 @@ void fillRegionsForHardProbe( HardProbe &found, Pythia& pythia, double phi, doub
         found.multRegion2, found.multEta1Region2, found.multV0ARegion2, found.multV0CRegion2,
         found.multRegion3, found.multEta1Region3, found.multV0ARegion3, found.multV0CRegion3,
         deltaPhi, part2->eta() );
-      fillRegion( found.multRegionRnd, found.multEta1RegionRnd, found.multV0ARegionRnd, found.multV0CRegionRnd,
+      fillRegionRandom( found.multRegionRnd, found.multEta1RegionRnd, found.multV0ARegionRnd, found.multV0CRegionRnd,
         deltaPhi_rnd, part2->eta() );
     }
   }
