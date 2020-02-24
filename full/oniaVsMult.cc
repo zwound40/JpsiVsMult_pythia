@@ -1280,11 +1280,11 @@ int thirdQuark (int pdg){
 }
 
 bool isCharmonium(int pdg){
-  return ( firstQuark(pdg) == 4 && secondQuark(pdg) == 4 );
+  return ( firstQuark(pdg) == 4 && secondQuark(pdg) == 4 && thirdQuark(pdg) == 0 );
 }
 
 bool isBottomonium(int pdg){
-  return ( firstQuark(pdg) == 5 && secondQuark(pdg) == 5 );
+  return ( firstQuark(pdg) == 5 && secondQuark(pdg) == 5 && thirdQuark(pdg) == 0 );
 }
 
 bool isOnium(int pdg){

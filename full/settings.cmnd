@@ -1,0 +1,12 @@
+Beams:eCM = 13000.
+SoftQCD:Inelastic = on
+Tune:pp =14
+PhaseSpace:pTHatMax = 13000.
+#310:mayDecay  = off
+#3122:mayDecay = off
+#3112:mayDecay = off
+#3222:mayDecay = off
+#3312:mayDecay = off
+#3322:mayDecay = off
+#3334:mayDecay = off
+#111:mayDecay  = off
