@@ -44,7 +44,7 @@ CXX_COMMON+= -L$(PREFIX_LIB) -Wl,-rpath,$(PREFIX_LIB) -lpythia8 -ldl -fopenmp
 
 # All targets (no default behavior).
 all:
-	@echo "Usage: make mainXX"
+	@echo "Usage: make oniaVsMult"
 
 # The Makefile configuration.
 Makefile.inc:
@@ -56,15 +56,6 @@ $(PREFIX_LIB)/libpythia8.a :
 	$(error Error: PYTHIA must be built, please run "make"\
                 in the top PYTHIA directory)
 
-# ROOT (turn off all warnings for readability).
-jpsiVsMult: $$@.cc $(PREFIX_LIB)/libpythia8.a
-ifeq ($(ROOT_USE),true)
-	$(CXX) $< -o $@ -w -I$(ROOT_INCLUDE) $(CXX_COMMON)\
-	 `$(ROOTBIN)root-config --cflags `\
-	 -Wl,-rpath,$(ROOT_LIB) `$(ROOT_BIN)root-config --glibs`
-else
-	@echo "Error: $@ requires ROOT"
-endif
 
 oniaVsMult: $$@.cc $(PREFIX_LIB)/libpythia8.a
 ifeq ($(ROOT_USE),true)
@@ -74,30 +65,3 @@ ifeq ($(ROOT_USE),true)
 else
 	@echo "Error: $@ requires ROOT"
 endif
-
-
-testOnia%: testOnia%.cc $(PREFIX_LIB)/libpythia8.a
-ifeq ($(ROOT_USE),true)
-	$(CXX) $< -o $@ -w -I$(ROOT_INCLUDE) $(CXX_COMMON)\
-	 `$(ROOTBIN)root-config --cflags `\
-	 -Wl,-rpath,$(ROOT_LIB) `$(ROOT_BIN)root-config --glibs`
-else
-	@echo "Error: $@ requires ROOT"
-endif
-
-testQuarks: testQuarks.cc $(PREFIX_LIB)/libpythia8.a
-ifeq ($(ROOT_USE),true)
-	$(CXX) $< -o $@ -w -I$(ROOT_INCLUDE) $(CXX_COMMON)\
-	 `$(ROOTBIN)root-config --cflags `\
-	 -Wl,-rpath,$(ROOT_LIB) `$(ROOT_BIN)root-config --glibs`
-else
-	@echo "Error: $@ requires ROOT"
-endif
-
-# Clean.
-clean:
-	@rm -f main[0-9][0-9]; rm -f out[0-9][0-9];\
-	rm -f mymain[0-9][0-9]; rm -f myout[0-9][0-9];\
-	rm -f test[0-9][0-9][0-9]; rm -f out[0-9][0-9][0-9];\
-	rm -f weakbosons.lhe; rm -f Pythia8.promc; rm -f hist.root;\
-	rm -f *~; rm -f \#*; rm -f core*; rm -f *Dct.*; rm -f *.so;
