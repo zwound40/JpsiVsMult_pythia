@@ -32,6 +32,6 @@ The folder basic contains simpler versions of the scripts which should be easier
     root plotRelOrigin.C+ 
     it uses the files 
 
-      defineAliases.C   - aliases for the trees are stored
-      defineEstimator.C - the multiplicity estimators are defined here, e.g. V0 = V0A + V0C
-      defineVariaion.C  - defines what exactly you want to plot, e.g. prompt J/psi in bins of pT, nonprompt J/psi for different production mechanisms, etc.
+      - defineAliases.C   - aliases for the trees are stored
+      - defineEstimator.C - the multiplicity estimators are defined here, e.g. V0 = V0A + V0C
+      - defineVariaion.C  - defines what exactly you want to plot, e.g. prompt J/psi in bins of pT, nonprompt J/psi for different production mechanisms, etc.
