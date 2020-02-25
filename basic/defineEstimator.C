@@ -1,19 +1,60 @@
-void defineEstimator( int estimator, bool noCR, bool noMPI, TString &multiplicityEstimator, TString &nCh, TString &region,  double &rapInterval, double &factor, bool &particles )   {
+/**
+ * 
+ * This macro defines the multiplicity estimator according to the code given to it.
+ * The codes are the following:
+ * 
+ * 
+ * 0: nch in full rapidity
+ * 1: nch in |eta| < 1
+ * 2: nch in V0A
+ * 3: nch in V0C
+ * 4: nch in V0M = V0A+V0C
+ * 5 : number of MPI
+ * 
+ * 10: nch in full rapidity in towards region
+ * 11: nch in |eta| < 1 in towards region
+ * 12: nch in V0A in towards region
+ * 13: nch in V0C in towards region
+ * 14: nch in V0M in towards region
+ * 
+ * 20: nch in full rapidity in transverse region
+ * 21: nch in |eta| < 1 in transverse region
+ * 22: nch in V0A in transverse region
+ * 23: nch in V0C in transverse region
+ * 24: nch in V0M in transverse region
+ * 
+ * 30: nch in full rapidity in away region
+ * 31: nch in |eta| < 1 in away region
+ * 32: nch in V0A in away region
+ * 33: nch in V0C in away region
+ * 34: nch in V0M in away region
+ * 
+ * 
+ * 
+ * The macro returns 3 strings:
+ *  - estimatorString : to be given to the tree for drawing
+ *  - stringForAxisTitle : used for the x axis title
+ *  - regionString : also used in the x axis title, describes the phi region
+ * 
+ * In addition it returns a factor by which to scale the x axis (because multiplicity in V0M is higher than in |eta| < 1 and so on)
+ * 
+ * 
+ * 
+ * 
+ */
 
-  particles = estimator != 5 && estimator !=6;
+void defineEstimator( int estimator, TString &estimatorString, TString &stringForAxisTitle, TString &regionString, double &factor){
+
   factor = 1.;
   switch(estimator){
     case 5:
-      nCh = "#it{N}_{MPI}";
-      multiplicityEstimator = "nMPI";
-      break;
-    case 6:
-      nCh = "#hat{#it{p}_{T}}";
-      multiplicityEstimator = "ptHat";
+      stringForAxisTitle = "#it{N}_{MPI}";
+      estimatorString = "nMPI";
+      return;
       break;
     default:
-      nCh = "#it{N}_{ch}";
-      multiplicityEstimator = "mult";
+      stringForAxisTitle = "#it{N}_{ch}";
+      estimatorString = "mult";
       break;
   }
 
@@ -23,29 +64,24 @@ void defineEstimator( int estimator, bool noCR, bool noMPI, TString &multiplicit
   
   switch( last_digit ){
     case 0:
-      rapInterval = 19;
-      region = "full rapidity";
+      regionString = "full rapidity";
       factor *= 2.;
       break;
     case 1:
-      rapInterval = 2;
-      region = "|#it{#eta}|<1";
-      multiplicityEstimator += "Eta1";
+      regionString = "|#it{#eta}|<1";
+      estimatorString += "Eta1";
       break;
     case 2:
-      rapInterval = 2.3;
-      region = "V0A";
-      multiplicityEstimator += "V0A";
+      regionString = "V0A";
+      estimatorString += "V0A";
       break;
     case 3:
-      rapInterval = 2.0;
-      region = "V0C";
-      multiplicityEstimator += "V0C";
+      regionString = "V0C";
+      estimatorString += "V0C";
       break;
     case 4:
-      rapInterval = 4.3;
-      region = "V0M";
-      multiplicityEstimator += "V0M";
+      regionString = "V0M";
+      estimatorString += "V0M";
       factor *= 1.5;
       break;
   }
@@ -55,54 +91,22 @@ void defineEstimator( int estimator, bool noCR, bool noMPI, TString &multiplicit
   
   switch(second_digit){
     case 1:
-      region += ", toward region";
-      multiplicityEstimator += "Region1";
+      regionString += ", toward region";
+      estimatorString += "Region1";
       factor /= 2.;
       break;
     case 2:
-      region += ", transverse region";
-      multiplicityEstimator += "Region2";
+      regionString += ", transverse region";
+      estimatorString += "Region2";
       factor /= 2.;
       break;
     case 3:
-      region += ", away region";
-      multiplicityEstimator += "Region3";
-      factor /= 2.;
-      break;
-    case 4:
-      region += ", random region";
-      multiplicityEstimator += "RegionRnd";
+      regionString += ", away region";
+      estimatorString += "Region3";
       factor /= 2.;
       break;
   }
   
-  int third_digit = (estimator %1000  - estimator %100) / 100;
-  switch(third_digit){
-    case 1:
-      region += ", (detector smearing)";
-      multiplicityEstimator += "_smeared";
-      break;
-    case 2:
-      region += ", (alpha corrected, PYTHIA N_{ch} distr.)";
-      multiplicityEstimator += "_alpha_pythia";
-      break;
-    case 3:
-      region += ", (alpha corr., EPOS N_{ch} distr.)";
-      multiplicityEstimator += "_alpha_epos";
-      break;
-    case 4:
-      region += ", (alpha corr., EPOS N_{ch} distr., unfolded)";
-      multiplicityEstimator += "_alpha_eposCorr";
-      break;
-
-  }
-    
-  if(estimator == 104) factor *= 4.;
-  if(estimator == 204) factor *= 5./6.;
   
-  
-  
-  if(noCR) factor *= 3.;
-  if(noMPI) factor /= 2.;
   
 }
