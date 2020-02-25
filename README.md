@@ -7,6 +7,8 @@ The folder basic contains simpler versions of the scripts which should be easier
   ./configure --with-root=`root-config --prefix`
   make
 
+  Afterwards copy the Makefile.inc from the pythia folder to the "basic" and "full" folders
+
 1. step is to produce the pythia events and store the information as TTrees in a root file. This is done by the oniaVsMult.cc file. It has to be compiled with the help of the Makefile, so run 
 
    make oniaVsMult
