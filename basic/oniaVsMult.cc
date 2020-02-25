@@ -109,7 +109,7 @@ void fillRegions( unsigned short &multRegion1, unsigned short &multEta1Region1, 
                   double phi, double eta);
 void fillRegionRandom( unsigned short &multRegion, unsigned short &multEta1Region, unsigned short &multV0ARegion, unsigned short &multV0CRegion,
                        double phi, double eta);
-void fillRegionsWrtQuarkonium( HardProbe &found, Pythia& pythia, double phi, double phi_rnd);
+void fillRegionsWrtQuarkonium( Quarkonium &found, Pythia& pythia, double phi);
 
 
 bool isPrimaryChargedALICE( unsigned short idx, Pythia &pythia);
@@ -263,10 +263,10 @@ int main( int argc, char** argv ) {
             }
 
             // we found a quarkonium
-            else  if( isOnium( part->id()  ) {
-            int pdg = part->id();
-                int pdgDau1 = pythia.event[ part->daughter1()  ].idAbs();
-                int pdgDau2 = pythia.event[ part->daughter2()  ].idAbs();
+            else  if( isOnium( part->id() ) ) {
+                int pdg = part->id();
+                int pdgDau1 = pythia.event[ part->daughter1()  ].id();
+                int pdgDau2 = pythia.event[ part->daughter2()  ].id();
                 // avoid double counting ("J/psi -> J/psi")
                 if( !( pdgDau1 == pdg ) && !( pdgDau2 == pdg ) ) {
 
@@ -274,8 +274,8 @@ int main( int argc, char** argv ) {
                     found.pt = part->pT();
                     found.y = part->y();
                     found.pdg = pdg;
-                    if (      pdgDau1 == 11 && pdgDau2 == 11 ) found.decayChannel = 1;
-                    else if ( pdgDau1 == 13 && pdgDau2 == 13 ) found.decayChannel = -1;
+                    if      ( abs(pdgDau1) == 11 && abs(pdgDau2) == 11 ) found.decayChannel = 1;
+                    else if ( abs(pdgDau1) == 13 && abs(pdgDau2) == 13 ) found.decayChannel = -1;
                     // get information on where the J/psi came from, i.e. prompt or non-prompt
                     traceBackQuarkonium( found, iPart, pythia );
 
@@ -477,7 +477,7 @@ void fillRegionRandom( unsigned short &multRegion, unsigned short &multEta1Regio
     }
 }
 
-void fillRegionsWrtQuarkonium( HardProbe &found, Pythia& pythia, double phi_quarkonium ) {
+void fillRegionsWrtQuarkonium( Quarkonium &found, Pythia& pythia, double phi_quarkonium ) {
     for ( int iPart2 = 0;  iPart2 < pythia.event.size(); iPart2++) {
         Particle* part2 = &pythia.event[iPart2];
         if(  isPrimaryChargedALICE(iPart2, pythia)  ) {
