@@ -59,9 +59,9 @@ $(PREFIX_LIB)/libpythia8.a :
 
 oniaVsMult: $$@.cc $(PREFIX_LIB)/libpythia8.a
 ifeq ($(ROOT_USE),true)
-	$(CXX) $< -o $@ -w -I$(ROOT_INCLUDE) $(CXX_COMMON)\
-	 `$(ROOTBIN)root-config --cflags `\
-	 -Wl,-rpath,$(ROOT_LIB) `$(ROOT_BIN)root-config --glibs`
+	$(CXX) $< -o $@ -w $(ROOT_INCLUDE) $(CXX_COMMON) $(CXX_ROOT)  \
+	 `$(ROOTBIN)/root-config --cflags `\
+	 -Wl,-rpath,$(ROOT_LIB) `$(ROOT_BIN)/root-config --glibs`
 else
 	@echo "Error: $@ requires ROOT"
 endif
