@@ -1,4 +1,6 @@
 #!/bin/bash
+# 1st argument: number of events to generate
+# 2nd argument: settings file to use
 if [ -z "$SLURM_ARRAY_TASK_ID" ] 
   then I=0
   else
