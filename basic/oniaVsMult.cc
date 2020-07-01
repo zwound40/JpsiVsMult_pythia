@@ -17,7 +17,11 @@
  * Details:
  *
  * The code was written to be run on a computing farm (like GSI kronos)
+ * 
  *
+ *
+ *
+ * To simulate inly J/psi in the EE decay channel use the settings file settings_EEdecay.cmnd
  *
  *
  *
